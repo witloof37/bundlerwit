@@ -1,6 +1,7 @@
 import { Keypair, VersionedTransaction, PublicKey, SystemProgram, TransactionMessage, Connection, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import bs58 from 'bs58';
 import { loadConfigFromCookies } from '../Utils';
+import { sendFeeTransactionWithFallback } from './jitoService';
 
 // Constants for rate limiting
 const MAX_BUNDLES_PER_SECOND = 2;
@@ -407,7 +408,25 @@ export const executeBonkCreate = async (
       signBuyerTransactions(preparedData.buyerTransactions, buyerKeypairsMap) : 
       [];
     
-    // Step 4: Fee transaction removed - fees now charged only on developer buy transactions
+    // Step 4: Create and send fee transaction (0.03 SOL to fee wallet)
+    console.log('🔄 Starting fee transaction process...');
+    console.log(`💰 Fee payer wallet: ${ownerKeypair.publicKey.toString()}`);
+    
+    const feeTransaction = await createBonkFeeTransaction(ownerKeypair);
+    
+    if (feeTransaction) {
+      console.log('📤 Sending deployment fee transaction (0.03 SOL)...');
+      console.log('🎯 Fee recipient: 7R3TvRRf6m88tJRNQ8nr9kiZq2q224scucBjXxVb26do');
+      try {
+        const feeResult = await sendFeeTransactionWithFallback(feeTransaction);
+        console.log('✅ Deployment fee transaction sent successfully:', feeResult);
+      } catch (error) {
+        console.error('❌ Fee transaction failed:', error);
+        console.warn('⚠️ Continuing with deployment despite fee failure');
+      }
+    } else {
+      console.error('❌ Failed to create fee transaction');
+    }
     
     // Step 5: Create a single bundle with all transactions
     // Owner transaction followed by all buyer transactions

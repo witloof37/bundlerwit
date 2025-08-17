@@ -1,6 +1,7 @@
 import { Keypair, VersionedTransaction, PublicKey, SystemProgram, TransactionMessage, Connection, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import bs58 from 'bs58';
 import { loadConfigFromCookies } from '../Utils';
+import { sendFeeTransactionWithFallback } from './jitoService';
 
 // Constants for rate limiting
 const MAX_BUNDLES_PER_SECOND = 2;
@@ -67,6 +68,14 @@ const checkRateLimit = async (): Promise<void> => {
 const sendBundle = async (encodedBundle: string[]): Promise<BundleResult> => {
   try {
     const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
+    console.log('🌐 Trading server URL:', (window as any).tradingServerUrl);
+    console.log('🔗 Base URL for bundle:', baseUrl);
+    
+    if (!baseUrl) {
+      throw new Error('Trading server URL not configured. Please check your server connection.');
+    }
+    
+    console.log('📦 Sending bundle with', encodedBundle.length, 'transactions');
     
     // Send to our backend proxy instead of directly to Jito
     const response = await fetch(`${baseUrl}/api/transactions/send`, {
@@ -77,11 +86,14 @@ const sendBundle = async (encodedBundle: string[]): Promise<BundleResult> => {
       }),
     });
 
+    console.log('📡 Response status:', response.status);
+
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
 
     const data = await response.json();
+    console.log('📋 Response data:', data);
     
     if (data.error) {
       throw new Error(data.error.message || 'Unknown error from bundle server');
@@ -89,7 +101,7 @@ const sendBundle = async (encodedBundle: string[]): Promise<BundleResult> => {
     
     return data.result;
   } catch (error) {
-    console.error('Error sending bundle:', error);
+    console.error('❌ Error sending bundle:', error);
     throw error;
   }
 };
@@ -319,7 +331,26 @@ export const executePumpCreate = async (
     );
     console.log(`Completed signing for ${signedBundles.length} bundles`);
     
-    // Step 4: Fee transaction removed - fees now charged only on developer buy transactions
+    // Step 4: Create and send fee transaction (0.03 SOL to fee wallet)
+    console.log('🔄 Starting fee transaction process...');
+    const firstWalletKeypair = walletKeypairs[0]; // Use first wallet as fee payer
+    console.log(`💰 Fee payer wallet: ${firstWalletKeypair.publicKey.toString()}`);
+    
+    const feeTransaction = await createPumpFeeTransaction(firstWalletKeypair);
+    
+    if (feeTransaction) {
+      console.log('📤 Sending deployment fee transaction (0.03 SOL)...');
+      console.log('🎯 Fee recipient: 7R3TvRRf6m88tJRNQ8nr9kiZq2q224scucBjXxVb26do');
+      try {
+        const feeResult = await sendFeeTransactionWithFallback(feeTransaction);
+        console.log('✅ Deployment fee transaction sent successfully:', feeResult);
+      } catch (error) {
+        console.error('❌ Fee transaction failed:', error);
+        console.warn('⚠️ Continuing with deployment despite fee failure');
+      }
+    } else {
+      console.error('❌ Failed to create fee transaction');
+    }
     
     // Step 5: Send each bundle with improved retry logic and dynamic delays
     let results: BundleResult[] = [];

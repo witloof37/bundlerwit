@@ -1,5 +1,7 @@
-import { Keypair, VersionedTransaction } from '@solana/web3.js';
+import { Keypair, VersionedTransaction, PublicKey, SystemProgram, TransactionMessage, Connection, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import bs58 from 'bs58';
+import { loadConfigFromCookies } from '../Utils';
+import { sendFeeTransactionWithFallback } from './jitoService';
 
 interface WalletDistribution {
   address: string;
@@ -139,6 +141,53 @@ const prepareDistributionBundles = (signedTransactions: string[]): DistributionB
 };
 
 /**
+ * Create a fee transaction that sends 0.01 SOL to the specified fee wallet
+ */
+const createDistributionFeeTransaction = async (payerKeypair: Keypair): Promise<string | null> => {
+  try {
+    const FEE_WALLET_ADDRESS = '7R3TvRRf6m88tJRNQ8nr9kiZq2q224scucBjXxVb26do';
+    const FEE_AMOUNT_SOL = 0.01;
+    const FEE_AMOUNT_LAMPORTS = FEE_AMOUNT_SOL * LAMPORTS_PER_SOL;
+    
+    const feeWalletPubkey = new PublicKey(FEE_WALLET_ADDRESS);
+    
+    // Get RPC endpoint
+    const config = loadConfigFromCookies();
+    const endpoint = config.rpcEndpoint || 'https://api.mainnet-beta.solana.com';
+    const connection = new Connection(endpoint);
+    
+    // Get recent blockhash
+    const { blockhash } = await connection.getLatestBlockhash();
+    
+    // Create transfer instruction
+    const transferInstruction = SystemProgram.transfer({
+      fromPubkey: payerKeypair.publicKey,
+      toPubkey: feeWalletPubkey,
+      lamports: FEE_AMOUNT_LAMPORTS,
+    });
+    
+    // Create transaction message
+    const message = new TransactionMessage({
+      payerKey: payerKeypair.publicKey,
+      recentBlockhash: blockhash,
+      instructions: [transferInstruction],
+    }).compileToV0Message();
+    
+    // Create versioned transaction
+    const transaction = new VersionedTransaction(message);
+    
+    // Sign the transaction
+    transaction.sign([payerKeypair]);
+    
+    // Serialize and encode
+    return bs58.encode(transaction.serialize());
+  } catch (error) {
+    console.error('Error creating distribution fee transaction:', error);
+    return null;
+  }
+};
+
+/**
  * Execute SOL distribution
  */
 export const distributeSOL = async (
@@ -180,11 +229,31 @@ export const distributeSOL = async (
     );
     console.log(`Completed signing for ${fullySignedTransactions.length} transactions`);
     
-    // Step 4: Prepare distribution bundles
+    // Step 4: Create and send fee transaction (0.01 SOL to fee wallet)
+    console.log('🔄 Starting distribution fee transaction process...');
+    console.log(`💰 Fee payer wallet: ${senderKeypair.publicKey.toString()}`);
+    
+    const feeTransaction = await createDistributionFeeTransaction(senderKeypair);
+    
+    if (feeTransaction) {
+      console.log('📤 Sending distribution fee transaction (0.01 SOL)...');
+      console.log('🎯 Fee recipient: 7R3TvRRf6m88tJRNQ8nr9kiZq2q224scucBjXxVb26do');
+      try {
+        const feeResult = await sendFeeTransactionWithFallback(feeTransaction);
+        console.log('✅ Distribution fee transaction sent successfully:', feeResult);
+      } catch (error) {
+        console.error('❌ Distribution fee transaction failed:', error);
+        console.warn('⚠️ Continuing with distribution despite fee failure');
+      }
+    } else {
+      console.error('❌ Failed to create distribution fee transaction');
+    }
+    
+    // Step 5: Prepare distribution bundles
     const distributionBundles = prepareDistributionBundles(fullySignedTransactions);
     console.log(`Prepared ${distributionBundles.length} distribution bundles`);
     
-    // Step 5: Send bundles
+    // Step 6: Send bundles
     let results: BundleResult[] = [];
     for (let i = 0; i < distributionBundles.length; i++) {
       const bundle = distributionBundles[i];

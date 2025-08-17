@@ -30,7 +30,6 @@ export default defineConfig({
 
           'operations': [
             './src/utils/bonkcreate.ts',
-            './src/utils/cookcreate.ts',
             './src/utils/cleaner.ts',
             './src/utils/consolidate.ts',
             './src/utils/distribute.ts',

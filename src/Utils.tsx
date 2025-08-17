@@ -646,10 +646,10 @@ export const loadConfigFromCookies = (): ConfigType | null => {
       }
       // Handle backward compatibility for delay settings
       if (config.singleDelay === undefined) {
-        config.singleDelay = '200'; // Default 200ms delay between wallets in single mode
+        config.singleDelay = '50'; // Reduced from 200ms to 50ms for faster trading
       }
       if (config.batchDelay === undefined) {
-        config.batchDelay = '1000'; // Default 1000ms delay between batches
+        config.batchDelay = '200'; // Reduced from 1000ms to 200ms for faster trading
       }
       return config;
     } catch (error) {

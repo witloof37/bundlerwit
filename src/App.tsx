@@ -72,6 +72,10 @@ const ServerRegionSelector: React.FC = () => {
 
   // Function to update server data from window
   const updateServerData = useCallback(() => {
+    console.log('App - Trading server URL:', (window as any).tradingServerUrl);
+    console.log('App - Server region:', window.serverRegion);
+    console.log('App - Available servers:', window.availableServers);
+    
     if (window.serverRegion) {
       setCurrentRegion(window.serverRegion);
     }

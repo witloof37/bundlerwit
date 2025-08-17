@@ -319,12 +319,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
   const dexOptions = [
     { value: 'auto', label: '⭐ Auto', icon: '⭐' },
     { value: 'pumpfun', label: 'PumpFun' },
-    { value: 'moonshot', label: 'Moonshot' },
-    { value: 'pumpswap', label: 'PumpSwap' },
-    { value: 'raydium', label: 'Raydium' },
-    { value: 'launchpad', label: 'Launchpad' },
-    { value: 'boopfun', label: 'BoopFun' },
-    { value: 'meteora', label: 'Meteora' },
+    { value: 'bonk', label: 'Bonk' },
   ];
   
   const handleTradeSubmit = async (wallets: WalletType[], isBuyMode: boolean, dex?: string, buyAmount?: string, sellAmount?: string) => {

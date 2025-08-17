@@ -11,7 +11,7 @@ export type ScriptType =
   | 'launchbuy' | 'launchsell'
   | 'boopbuy' | 'boopsell'
   | 'consolidate' | 'distribute' | 'mixer' | 'cleaner'
-  | 'bonkcreate' | 'cookcreate' | 'pumpcreate' | 'mooncreate' | 'boopcreate'
+  | 'bonkcreate' | 'pumpcreate'
   | 'deploy';
 
 /**

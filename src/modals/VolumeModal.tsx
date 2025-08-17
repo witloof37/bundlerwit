@@ -102,6 +102,18 @@ export const VolumeModal: React.FC<VolumeModalProps> = ({
         showToast("Please enter a valid duration", "error");
         return;
       }
+      if (volumeSettings.minBuyAmount <= 0) {
+        showToast("Please enter a valid minimum buy amount", "error");
+        return;
+      }
+      if (volumeSettings.maxBuyAmount <= 0) {
+        showToast("Please enter a valid maximum buy amount", "error");
+        return;
+      }
+      if (volumeSettings.minBuyAmount >= volumeSettings.maxBuyAmount) {
+        showToast("Minimum buy amount must be less than maximum buy amount", "error");
+        return;
+      }
     }
     
     setModalClass('animate-step-out');
@@ -131,31 +143,57 @@ export const VolumeModal: React.FC<VolumeModalProps> = ({
 
   const handleSelectAll = () => {
     const walletsWithSol = wallets.filter(wallet => {
-      const balance = solBalances.get(wallet) || 0;
+      const balance = solBalances.get(wallet.address) || 0;
       return balance > 0.01; // Only wallets with at least 0.01 SOL
     });
     
-    if (selectedWallets.length === walletsWithSol.length) {
+    const walletAddresses = walletsWithSol.map(w => w.address);
+    
+    if (selectedWallets.length === walletAddresses.length) {
       setSelectedWallets([]);
     } else {
-      setSelectedWallets(walletsWithSol);
+      setSelectedWallets(walletAddresses);
     }
   };
 
   const startVolumeBot = async () => {
     setIsSubmitting(true);
     try {
+      console.log('🔍 Selected wallet addresses:', selectedWallets);
+      console.log('🔍 Available wallets:', wallets.length);
+      
+      // Convert selected wallet addresses to private keys
+      const selectedWalletPrivateKeys = selectedWallets.map(address => {
+        const wallet = wallets.find(w => w.address === address);
+        console.log('🔍 Finding wallet for address:', address, 'found:', !!wallet);
+        if (wallet) {
+          console.log('🔍 Wallet private key sample:', wallet.privateKey.substring(0, 20) + '...');
+        }
+        return wallet ? wallet.privateKey : null;
+      }).filter(pk => pk !== null);
+      
+      console.log('🔍 Selected wallet private keys:', selectedWalletPrivateKeys.length);
+      
+      if (selectedWalletPrivateKeys.length === 0) {
+        throw new Error('No valid wallets selected');
+      }
+      
       // Format data according to VolumeConfig interface
       const volumeConfig = {
         tokenAddress,
-        wallets: selectedWallets,
+        wallets: selectedWalletPrivateKeys,
         minAmount: volumeSettings.minBuyAmount,
         maxAmount: volumeSettings.maxBuyAmount,
         intervalMin: volumeSettings.intervalMin,
         intervalMax: volumeSettings.intervalMax,
+        interval: Math.floor((volumeSettings.intervalMin + volumeSettings.intervalMax) / 2), // Average interval
         duration: volumeSettings.duration,
-        slippage: 5 // Default 5% slippage
+        slippage: 5, // Default 5% slippage
+        sellPercent: Math.floor((volumeSettings.minSellPercentage + volumeSettings.maxSellPercentage) / 2), // Average sell percentage
+        protocol: 'auto' as const // Use auto protocol selection
       };
+      
+      console.log('🔍 Volume config:', volumeConfig);
       
       setIsRunning(true);
       setVolumeStats(prev => ({ ...prev, timeRemaining: volumeSettings.duration * 60 }));
@@ -187,7 +225,7 @@ export const VolumeModal: React.FC<VolumeModalProps> = ({
 
   const getFilteredWallets = () => {
     let filtered = wallets.filter(wallet => {
-      const balance = solBalances.get(wallet) || 0;
+      const balance = solBalances.get(wallet.address) || 0;
       const displayName = getWalletDisplayName(wallet);
       
       // Balance filter
@@ -208,8 +246,8 @@ export const VolumeModal: React.FC<VolumeModalProps> = ({
       
       switch (sortOption) {
         case 'balance':
-          aValue = solBalances.get(a) || 0;
-          bValue = solBalances.get(b) || 0;
+          aValue = solBalances.get(a.address) || 0;
+          bValue = solBalances.get(b.address) || 0;
           break;
         case 'address':
           aValue = getWalletDisplayName(a);
@@ -379,7 +417,7 @@ export const VolumeModal: React.FC<VolumeModalProps> = ({
                   onClick={handleSelectAll}
                   className="px-4 py-2 bg-app-primary-color text-app-primary rounded-lg hover:bg-app-primary-dark transition-all font-mono"
                 >
-                  {selectedWallets.length === getFilteredWallets().filter(w => (solBalances.get(w) || 0) > 0.01).length ? 'Deselect All' : 'Select All'}
+                  {selectedWallets.length === getFilteredWallets().filter(w => (solBalances.get(w.address) || 0) > 0.01).length ? 'Deselect All' : 'Select All'}
                 </button>
                 <span className="text-sm text-app-secondary font-mono">
                   {selectedWallets.length} wallet(s) selected
@@ -389,14 +427,14 @@ export const VolumeModal: React.FC<VolumeModalProps> = ({
               {/* Wallet List */}
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {getFilteredWallets().map((wallet) => {
-                  const balance = solBalances.get(wallet) || 0;
-                  const isSelected = selectedWallets.includes(wallet);
+                  const balance = solBalances.get(wallet.address) || 0;
+                  const isSelected = selectedWallets.includes(wallet.address);
                   const hasEnoughSol = balance > 0.01;
                   
                   return (
                     <div
-                      key={wallet}
-                      onClick={() => hasEnoughSol && handleWalletToggle(wallet)}
+                      key={wallet.address}
+                      onClick={() => hasEnoughSol && handleWalletToggle(wallet.address)}
                       className={`p-3 rounded-lg border transition-all cursor-pointer ${
                         isSelected
                           ? 'border-app-primary-color bg-app-primary-10'
@@ -417,7 +455,7 @@ export const VolumeModal: React.FC<VolumeModalProps> = ({
                               {getWalletDisplayName(wallet)}
                             </div>
                             <div className="text-xs text-app-secondary font-mono">
-                              {wallet.slice(0, 8)}...{wallet.slice(-8)}
+                              {wallet.address.slice(0, 8)}...{wallet.address.slice(-8)}
                             </div>
                           </div>
                         </div>
@@ -731,16 +769,8 @@ export const VolumeModal: React.FC<VolumeModalProps> = ({
             <button
               type="button"
               onClick={handleNext}
-              disabled={(
-                (currentStep === 0 && selectedWallets.length === 0) ||
-                (currentStep === 1 && volumeSettings.duration <= 0)
-              )}
-              className={`px-6 py-3 rounded-lg transition-all font-mono flex items-center space-x-2 ${
-                ((currentStep === 0 && selectedWallets.length === 0) ||
-                (currentStep === 1 && volumeSettings.duration <= 0))
-                  ? 'bg-app-primary-50 text-app-primary-80 cursor-not-allowed opacity-50' 
-                  : 'bg-app-primary-color text-app-primary hover:bg-app-primary-dark transform hover:-translate-y-0.5'
-              }`}
+              disabled={(                (currentStep === 0 && selectedWallets.length === 0) ||                (currentStep === 1 && (volumeSettings.duration <= 0 || volumeSettings.minBuyAmount <= 0 || volumeSettings.maxBuyAmount <= 0 || volumeSettings.minBuyAmount >= volumeSettings.maxBuyAmount))              )}
+              className={`px-6 py-3 rounded-lg transition-all font-mono flex items-center space-x-2 ${                ((currentStep === 0 && selectedWallets.length === 0) ||                (currentStep === 1 && (volumeSettings.duration <= 0 || volumeSettings.minBuyAmount <= 0 || volumeSettings.maxBuyAmount <= 0 || volumeSettings.minBuyAmount >= volumeSettings.maxBuyAmount)))                  ? 'bg-app-primary-50 text-app-primary-80 cursor-not-allowed opacity-50'                   : 'bg-app-primary-color text-app-primary hover:bg-app-primary-dark transform hover:-translate-y-0.5'              }`}
             >
               <span>Next</span>
               <ChevronRight size={16} />

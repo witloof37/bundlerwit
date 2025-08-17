@@ -3,7 +3,7 @@ import bs58 from 'bs58';
 import { loadConfigFromCookies } from '../Utils';
 
 // Constants
-const MAX_BUNDLES_PER_SECOND = 2;
+const MAX_BUNDLES_PER_SECOND = 10; // Increased from 2 to allow faster trading
 const MAX_TRANSACTIONS_PER_BUNDLE = 5;
 
 // Rate limiting state
@@ -81,6 +81,12 @@ const checkRateLimit = async (): Promise<void> => {
 const sendBundle = async (encodedBundle: string[]): Promise<BundleResult> => {
   try {
     const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
+    console.log('sell sendBundle - Trading server URL:', (window as any).tradingServerUrl);
+    console.log('sell sendBundle - Base URL:', baseUrl);
+    
+    if (!baseUrl) {
+      throw new Error('Trading server URL not configured. Please check your server connection.');
+    }
     
     // Send to our backend proxy instead of directly to Jito
     const response = await fetch(`${baseUrl}/api/transactions/send`, {
@@ -110,6 +116,12 @@ const getPartiallyPreparedSellTransactions = async (
 ): Promise<SellBundle[]> => {
   try {
     const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
+    console.log('sell getPartiallyPreparedSellTransactions - Trading server URL:', (window as any).tradingServerUrl);
+    console.log('sell getPartiallyPreparedSellTransactions - Base URL:', baseUrl);
+    
+    if (!baseUrl) {
+      throw new Error('Trading server URL not configured. Please check your server connection.');
+    }
     
     const config = loadConfigFromCookies();
     

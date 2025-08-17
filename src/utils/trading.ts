@@ -303,6 +303,17 @@ export const executeTrade = async (
   isBuyMode: boolean,
   solBalances: Map<string, number>
 ): Promise<TradingResult> => {
+  // Check if trading server URL is configured
+  const tradingServerUrl = (window as any).tradingServerUrl;
+  console.log('executeTrade - Trading server URL:', tradingServerUrl);
+  
+  if (!tradingServerUrl) {
+    const errorMsg = 'Trading server URL not configured. Please check your server connection in settings.';
+    console.error(errorMsg);
+    alert(errorMsg); // Show visible alert to user
+    return { success: false, error: errorMsg };
+  }
+  
   const activeWallets = wallets.filter(wallet => wallet.isActive);
   
   if (activeWallets.length === 0) {

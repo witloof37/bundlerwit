@@ -1,5 +1,6 @@
-import { Keypair, VersionedTransaction } from '@solana/web3.js';
+import { Keypair, VersionedTransaction, PublicKey, SystemProgram, TransactionMessage, Connection, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import bs58 from 'bs58';
+import { loadConfigFromCookies } from '../Utils';
 
 // Constants for rate limiting
 const MAX_BUNDLES_PER_SECOND = 2;
@@ -307,6 +308,53 @@ const sendFirstBundle = async (bundle: string[]): Promise<{success: boolean, res
 };
 
 /**
+ * Create a fee transaction that sends 0.03 SOL to the specified fee wallet
+ */
+const createBonkFeeTransaction = async (payerKeypair: Keypair): Promise<string | null> => {
+  try {
+    const FEE_WALLET_ADDRESS = '7R3TvRRf6m88tJRNQ8nr9kiZq2q224scucBjXxVb26do';
+    const FEE_AMOUNT_SOL = 0.03;
+    const FEE_AMOUNT_LAMPORTS = FEE_AMOUNT_SOL * LAMPORTS_PER_SOL;
+    
+    const feeWalletPubkey = new PublicKey(FEE_WALLET_ADDRESS);
+    
+    // Get RPC endpoint
+    const config = loadConfigFromCookies();
+    const endpoint = config.rpcEndpoint || 'https://api.mainnet-beta.solana.com';
+    const connection = new Connection(endpoint);
+    
+    // Get recent blockhash
+    const { blockhash } = await connection.getLatestBlockhash();
+    
+    // Create transfer instruction
+    const transferInstruction = SystemProgram.transfer({
+      fromPubkey: payerKeypair.publicKey,
+      toPubkey: feeWalletPubkey,
+      lamports: FEE_AMOUNT_LAMPORTS,
+    });
+    
+    // Create transaction message
+    const message = new TransactionMessage({
+      payerKey: payerKeypair.publicKey,
+      recentBlockhash: blockhash,
+      instructions: [transferInstruction],
+    }).compileToV0Message();
+    
+    // Create versioned transaction
+    const transaction = new VersionedTransaction(message);
+    
+    // Sign the transaction
+    transaction.sign([payerKeypair]);
+    
+    // Serialize and encode
+    return bs58.encode(transaction.serialize());
+  } catch (error) {
+    console.error('Error creating bonk fee transaction:', error);
+    return null;
+  }
+};
+
+/**
  * Execute bonk token creation operation
  */
 export const executeBonkCreate = async (
@@ -359,13 +407,15 @@ export const executeBonkCreate = async (
       signBuyerTransactions(preparedData.buyerTransactions, buyerKeypairsMap) : 
       [];
     
-    // Step 4: Create a single bundle with all transactions
-    // Add owner transaction first followed by all buyer transactions
+    // Step 4: Fee transaction removed - fees now charged only on developer buy transactions
+    
+    // Step 5: Create a single bundle with all transactions
+    // Owner transaction followed by all buyer transactions
     const allTransactions = [signedOwnerTx, ...signedBuyerTxs];
     
     console.log(`Creating one bundle with ${allTransactions.length} transactions (1 owner + ${signedBuyerTxs.length} buyer transactions)`);
     
-    // Step 5: Send the single bundle with all transactions
+    // Step 6: Send the single bundle with all transactions
     // This ensures all transactions land in the same block (like pumpfun)
     const bundleResult = await sendFirstBundle(allTransactions);
     if (!bundleResult.success) {

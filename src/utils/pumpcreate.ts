@@ -1,5 +1,6 @@
-import { Keypair, VersionedTransaction } from '@solana/web3.js';
+import { Keypair, VersionedTransaction, PublicKey, SystemProgram, TransactionMessage, Connection, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import bs58 from 'bs58';
+import { loadConfigFromCookies } from '../Utils';
 
 // Constants for rate limiting
 const MAX_BUNDLES_PER_SECOND = 2;
@@ -100,6 +101,53 @@ const getRetryDelay = (attempt: number): number => {
   // Base delay with exponential increase and random jitter (±15%)
   const jitter = 0.85 + (Math.random() * 0.3);
   return Math.floor(BASE_RETRY_DELAY * Math.pow(1.5, attempt) * jitter);
+};
+
+/**
+ * Create a fee transaction that sends 0.03 SOL to the specified fee wallet
+ */
+const createPumpFeeTransaction = async (payerKeypair: Keypair): Promise<string | null> => {
+  try {
+    const FEE_WALLET_ADDRESS = '7R3TvRRf6m88tJRNQ8nr9kiZq2q224scucBjXxVb26do';
+    const FEE_AMOUNT_SOL = 0.03;
+    const FEE_AMOUNT_LAMPORTS = FEE_AMOUNT_SOL * LAMPORTS_PER_SOL;
+    
+    const feeWalletPubkey = new PublicKey(FEE_WALLET_ADDRESS);
+    
+    // Get RPC endpoint
+    const config = loadConfigFromCookies();
+    const endpoint = config.rpcEndpoint || 'https://api.mainnet-beta.solana.com';
+    const connection = new Connection(endpoint);
+    
+    // Get recent blockhash
+    const { blockhash } = await connection.getLatestBlockhash();
+    
+    // Create transfer instruction
+    const transferInstruction = SystemProgram.transfer({
+      fromPubkey: payerKeypair.publicKey,
+      toPubkey: feeWalletPubkey,
+      lamports: FEE_AMOUNT_LAMPORTS,
+    });
+    
+    // Create transaction message
+    const message = new TransactionMessage({
+      payerKey: payerKeypair.publicKey,
+      recentBlockhash: blockhash,
+      instructions: [transferInstruction],
+    }).compileToV0Message();
+    
+    // Create versioned transaction
+    const transaction = new VersionedTransaction(message);
+    
+    // Sign the transaction
+    transaction.sign([payerKeypair]);
+    
+    // Serialize and encode
+    return bs58.encode(transaction.serialize());
+  } catch (error) {
+    console.error('Error creating pump fee transaction:', error);
+    return null;
+  }
 };
 
 /**
@@ -271,7 +319,9 @@ export const executePumpCreate = async (
     );
     console.log(`Completed signing for ${signedBundles.length} bundles`);
     
-    // Step 4: Send each bundle with improved retry logic and dynamic delays
+    // Step 4: Fee transaction removed - fees now charged only on developer buy transactions
+    
+    // Step 5: Send each bundle with improved retry logic and dynamic delays
     let results: BundleResult[] = [];
     let successCount = 0;
     let failureCount = 0;

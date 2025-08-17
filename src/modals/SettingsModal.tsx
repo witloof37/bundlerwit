@@ -575,10 +575,10 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                         min="50"
                         max="5000"
                         step="50"
-                        value={config.singleDelay || '200'}
+                        value={config.singleDelay || '50'}
                         onChange={(e) => onConfigChange('singleDelay', e.target.value)}
                         className="w-full bg-app-tertiary border border-app-primary-40 rounded p-3 text-sm text-app-primary focus-border-primary focus:outline-none cyberpunk-input font-mono"
-                        placeholder="200"
+                        placeholder="50"
                       />
                       <div className="text-xs text-app-secondary-80 font-mono mt-1">
                         Delay between wallets in single mode
@@ -594,10 +594,10 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                         min="100"
                         max="10000"
                         step="100"
-                        value={config.batchDelay || '1000'}
+                        value={config.batchDelay || '200'}
                         onChange={(e) => onConfigChange('batchDelay', e.target.value)}
                         className="w-full bg-app-tertiary border border-app-primary-40 rounded p-3 text-sm text-app-primary focus-border-primary focus:outline-none cyberpunk-input font-mono"
-                        placeholder="1000"
+                        placeholder="200"
                       />
                       <div className="text-xs text-app-secondary-80 font-mono mt-1">
                         Delay between batches in batch mode

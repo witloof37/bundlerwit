@@ -61,7 +61,7 @@ interface ActionsPageProps {
   solBalances: Map<string, number>;
   tokenBalances: Map<string, number>;
   currentMarketCap: number | null;
-  setBurnModalOpen: (open: boolean) => void;
+  setVolumeModalOpen: (open: boolean) => void;
   setCalculatePNLModalOpen: (open: boolean) => void;
   setDeployModalOpen: (open: boolean) => void;
   setCleanerTokensModalOpen: (open: boolean) => void;
@@ -296,7 +296,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
   solBalances, 
   tokenBalances, 
   currentMarketCap,
-  setBurnModalOpen,
+  setVolumeModalOpen,
   setCalculatePNLModalOpen,
   setDeployModalOpen,
   setCleanerTokensModalOpen,
@@ -466,23 +466,23 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
                 <span className="text-xs font-mono tracking-wider text-app-secondary uppercase">Deploy</span>
               </button>
               
-              {/* Burn Button */}
+              {/* Volume Button */}
               <button
                 onClick={() => {
                   if (!tokenAddress) {
                     showToast("Please select a token first", "error");
                     return;
                   }
-                  setBurnModalOpen(true);
+                  setVolumeModalOpen(true);
                 }}
                 className="flex flex-col items-center gap-2 p-3 rounded-lg
                           bg-gradient-to-br from-app-secondary-80 to-app-primary-dark-50 border border-app-primary-30 hover-border-primary-60
                           transition-all duration-300"
               >
                 <div className="p-3 bg-gradient-to-br from-app-primary-20 to-app-primary-05 rounded-lg">
-                  <Trash2 size={20} className="color-primary" />
+                  <Activity size={20} className="color-primary" />
                 </div>
-                <span className="text-xs font-mono tracking-wider text-app-secondary uppercase">Burn</span>
+                <span className="text-xs font-mono tracking-wider text-app-secondary uppercase">Volume</span>
               </button>
               
               {/* Stagger Button */}

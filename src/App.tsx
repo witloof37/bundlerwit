@@ -27,6 +27,7 @@ import {
 } from './Manager';
 import { countActiveWallets, getScriptName } from './utils/wallets';
 import { executeTrade } from './utils/trading.ts';
+import { startVolumeBot, stopVolumeBot, getVolumeBotStats, VolumeConfig } from './utils/volumeBot';
 
 // Extend Window interface to include server-related properties
 declare global {
@@ -46,7 +47,7 @@ const ActionsPage = lazy(() => import('./Actions').then(module => ({ default: mo
 const MobileLayout = lazy(() => import('./Mobile'));
 
 // Import modal components 
-const BurnModal = lazy(() => import('./modals/BurnModal.tsx').then(module => ({ default: module.BurnModal })));
+const VolumeModal = lazy(() => import('./modals/VolumeModal.tsx').then(module => ({ default: module.VolumeModal })));
 const PnlModal = lazy(() => import('./modals/CalculatePNLModal.tsx').then(module => ({ default: module.PnlModal })));
 const DeployModal = lazy(() => import('./modals/DeployModal.tsx').then(module => ({ default: module.DeployModal })));
 const CleanerTokensModal = lazy(() => import('./modals/CleanerModal.tsx').then(module => ({ default: module.CleanerTokensModal })));
@@ -302,7 +303,7 @@ const WalletManager: React.FC = () => {
     isLoadingChart: boolean;
     currentMarketCap: number | null;
     modals: {
-      burnModalOpen: boolean;
+      volumeModalOpen: boolean;
       calculatePNLModalOpen: boolean;
       deployModalOpen: boolean;
       cleanerTokensModalOpen: boolean;
@@ -407,7 +408,7 @@ const WalletManager: React.FC = () => {
     isLoadingChart: false,
     currentMarketCap: null,
     modals: {
-      burnModalOpen: false,
+      volumeModalOpen: false,
       calculatePNLModalOpen: false,
       deployModalOpen: false,
       cleanerTokensModalOpen: false,
@@ -560,7 +561,7 @@ const WalletManager: React.FC = () => {
 
     setIsLoadingChart: (loading: boolean) => dispatch({ type: 'SET_LOADING_CHART', payload: loading }),
     setCurrentMarketCap: (cap: number | null) => dispatch({ type: 'SET_MARKET_CAP', payload: cap }),
-    setBurnModalOpen: (open: boolean) => dispatch({ type: 'SET_MODAL', payload: { modal: 'burnModalOpen', open } }),
+    setVolumeModalOpen: (open: boolean) => dispatch({ type: 'SET_MODAL', payload: { modal: 'volumeModalOpen', open } }),
     setCalculatePNLModalOpen: (open: boolean) => dispatch({ type: 'SET_MODAL', payload: { modal: 'calculatePNLModalOpen', open } }),
     setDeployModalOpen: (open: boolean) => dispatch({ type: 'SET_MODAL', payload: { modal: 'deployModalOpen', open } }),
     setCleanerTokensModalOpen: (open: boolean) => dispatch({ type: 'SET_MODAL', payload: { modal: 'cleanerTokensModalOpen', open } }),
@@ -889,12 +890,42 @@ const WalletManager: React.FC = () => {
   const openChartPage = useCallback(() => memoizedCallbacks.setCurrentPage('chart'), []);
   const openActionsPage = useCallback(() => memoizedCallbacks.setCurrentPage('actions'), []);
 
-  const handleBurn = async (amount: string) => {
+  const handleVolume = async (data: VolumeConfig) => {
     try {
-      console.log('burn', amount, 'SOL to');
-      showToast('Burn successful', 'success');
+      console.log('Starting volume bot with configuration:', data);
+      
+      // Validate configuration
+      if (!data.tokenAddress || data.wallets.length === 0) {
+        throw new Error('Invalid configuration: Token address and wallets are required');
+      }
+      
+      if (data.minAmount <= 0 || data.maxAmount <= 0 || data.minAmount > data.maxAmount) {
+        throw new Error('Invalid amount configuration');
+      }
+      
+      if (data.intervalMin <= 0 || data.intervalMax <= 0 || data.intervalMin > data.intervalMax) {
+        throw new Error('Invalid interval configuration');
+      }
+      
+      // Start the volume bot
+      await startVolumeBot(data);
+      
+      showToast(`Volume bot started for ${data.duration} minutes`, 'success');
+      
+      // Log stats periodically
+      const statsInterval = setInterval(() => {
+        const stats = getVolumeBotStats();
+        if (!stats.isRunning) {
+          clearInterval(statsInterval);
+          showToast(`Volume bot completed. Total trades: ${stats.totalTrades}, Volume: ${stats.totalVolume.toFixed(4)} SOL`, 'success');
+        } else {
+          console.log('Volume bot stats:', stats);
+        }
+      }, 30000); // Log every 30 seconds
+       
     } catch (error) {
-      showToast('Burn failed', 'error');
+      console.error('Volume bot error:', error);
+      showToast(`Volume bot failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
     }
   };
 
@@ -1055,7 +1086,7 @@ const WalletManager: React.FC = () => {
               solBalances={state.solBalances}
               tokenBalances={state.tokenBalances}
               currentMarketCap={state.currentMarketCap}
-              setBurnModalOpen={memoizedCallbacks.setBurnModalOpen}
+              setVolumeModalOpen={memoizedCallbacks.setVolumeModalOpen}
               setCalculatePNLModalOpen={memoizedCallbacks.setCalculatePNLModalOpen}
               setDeployModalOpen={memoizedCallbacks.setDeployModalOpen}
               setCleanerTokensModalOpen={memoizedCallbacks.setCleanerTokensModalOpen}
@@ -1126,7 +1157,7 @@ const WalletManager: React.FC = () => {
                 solBalances={state.solBalances}
                 tokenBalances={state.tokenBalances}
                 currentMarketCap={state.currentMarketCap}
-                setBurnModalOpen={memoizedCallbacks.setBurnModalOpen}
+                setVolumeModalOpen={memoizedCallbacks.setVolumeModalOpen}
                 setCalculatePNLModalOpen={memoizedCallbacks.setCalculatePNLModalOpen}
                 setDeployModalOpen={memoizedCallbacks.setDeployModalOpen}
                 setCleanerTokensModalOpen={memoizedCallbacks.setCleanerTokensModalOpen}
@@ -1181,10 +1212,10 @@ const WalletManager: React.FC = () => {
       />
 
       {/* Modals */}
-      <BurnModal
-        isOpen={state.modals.burnModalOpen}
-        onBurn={handleBurn}
-        onClose={() => memoizedCallbacks.setBurnModalOpen(false)}
+      <VolumeModal
+        isOpen={state.modals.volumeModalOpen}
+        onVolume={handleVolume}
+        onClose={() => memoizedCallbacks.setVolumeModalOpen(false)}
         handleRefresh={handleRefresh}
         tokenAddress={state.tokenAddress}
         solBalances={state.solBalances} 

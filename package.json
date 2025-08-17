@@ -30,6 +30,7 @@
     "lucide-react": "^0.471.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-hot-toast": "^2.6.0",
     "react-split": "^2.0.14",
     "react-window": "^1.8.11",
     "serve": "^14.2.4",

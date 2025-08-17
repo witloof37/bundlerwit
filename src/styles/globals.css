@@ -27,7 +27,13 @@
     var(--color-primary) 75%, 
     var(--color-success) 100%);
   outline: none;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  animation: slider-glow 3s infinite;
+}
+
+@keyframes slider-glow {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.2) drop-shadow(0 0 8px var(--color-primary-50)); }
 }
 
 .market-cap-slider::-webkit-slider-thumb {
@@ -39,14 +45,20 @@
   background: var(--color-primary);
   border: 2px solid var(--color-bg-primary);
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(2, 179, 109, 0.3);
-  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px var(--color-primary-30);
+  transition: all 0.3s ease;
 }
 
 .market-cap-slider::-webkit-slider-thumb:hover {
   background: var(--color-primary-light);
-  box-shadow: 0 4px 12px rgba(2, 179, 109, 0.5);
-  transform: scale(1.1);
+  box-shadow: 0 4px 12px var(--color-primary-50), 0 0 20px var(--color-primary-40);
+  transform: scale(1.2);
+  animation: thumb-pulse 1s infinite;
+}
+
+@keyframes thumb-pulse {
+  0%, 100% { box-shadow: 0 4px 12px var(--color-primary-50), 0 0 20px var(--color-primary-40); }
+  50% { box-shadow: 0 6px 16px var(--color-primary-70), 0 0 30px var(--color-primary-60); }
 }
 
 .market-cap-slider::-moz-range-thumb {
@@ -56,14 +68,14 @@
   background: var(--color-primary);
   border: 2px solid var(--color-bg-primary);
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(2, 179, 109, 0.3);
-  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px var(--color-primary-30);
+  transition: all 0.3s ease;
 }
 
 .market-cap-slider::-moz-range-thumb:hover {
   background: var(--color-primary-light);
-  box-shadow: 0 4px 12px rgba(2, 179, 109, 0.5);
-  transform: scale(1.1);
+  box-shadow: 0 4px 12px var(--color-primary-50), 0 0 20px var(--color-primary-40);
+  transform: scale(1.2);
 }
 
 .market-cap-slider::-moz-range-track {
@@ -79,7 +91,7 @@
 }
 
 .market-cap-slider:focus {
-  box-shadow: 0 0 0 3px rgba(2, 179, 109, 0.2);
+  box-shadow: 0 0 0 3px var(--color-primary-20), 0 0 15px var(--color-primary-40);
 }
 
 @keyframes slideProgress {
@@ -93,6 +105,32 @@
         transform: translateX(300%);
     }
 }
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-glow {
+    0%, 100% { 
+        box-shadow: 0 0 5px var(--color-primary-40);
+        transform: scale(1);
+    }
+    50% { 
+        box-shadow: 0 0 20px var(--color-primary-70), 0 0 30px var(--color-primary-50);
+        transform: scale(1.02);
+    }
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+@keyframes rotate-border {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
 :root {
   --sat: env(safe-area-inset-top);
   --sar: env(safe-area-inset-right);
@@ -100,30 +138,30 @@
   --sal: env(safe-area-inset-left);
 
   /* Color Palette */
-  /* Primary Colors */
-  --color-primary: #02b36d;
-  --color-primary-light: #04d47c;
-  --color-primary-dark: #01a35f;
-  --color-primary-darker: #029359;
+  /* Primary Colors - Purple/Blue Theme */
+  --color-primary: #6366f1;
+  --color-primary-light: #818cf8;
+  --color-primary-dark: #4f46e5;
+  --color-primary-darker: #3730a3;
   
   /* Primary with opacity variations */
-  --color-primary-05: rgba(2, 179, 109, 0.05);
-  --color-primary-10: rgba(2, 179, 109, 0.1);
-  --color-primary-15: rgba(2, 179, 109, 0.15);
-  --color-primary-20: rgba(2, 179, 109, 0.2);
-  --color-primary-30: rgba(2, 179, 109, 0.3);
-  --color-primary-40: rgba(2, 179, 109, 0.4);
-  --color-primary-50: rgba(2, 179, 109, 0.5);
-  --color-primary-60: rgba(2, 179, 109, 0.6);
-  --color-primary-70: rgba(2, 179, 109, 0.7);
-  --color-primary-80: rgba(2, 179, 109, 0.8);
-  --color-primary-90: rgba(2, 179, 109, 0.9);
+  --color-primary-05: rgba(99, 102, 241, 0.05);
+  --color-primary-10: rgba(99, 102, 241, 0.1);
+  --color-primary-15: rgba(99, 102, 241, 0.15);
+  --color-primary-20: rgba(99, 102, 241, 0.2);
+  --color-primary-30: rgba(99, 102, 241, 0.3);
+  --color-primary-40: rgba(99, 102, 241, 0.4);
+  --color-primary-50: rgba(99, 102, 241, 0.5);
+  --color-primary-60: rgba(99, 102, 241, 0.6);
+  --color-primary-70: rgba(99, 102, 241, 0.7);
+  --color-primary-80: rgba(99, 102, 241, 0.8);
+  --color-primary-90: rgba(99, 102, 241, 0.9);
   
-  /* Background Colors */
-  --color-bg-primary: #050a0e;
-  --color-bg-secondary: #0a1419;
-  --color-bg-tertiary: #091217;
-  --color-bg-quaternary: #051014;
+  /* Background Colors - Dark Purple/Blue Theme */
+  --color-bg-primary: #0f0a1e;
+  --color-bg-secondary: #1a1229;
+  --color-bg-tertiary: #171025;
+  --color-bg-quaternary: #140c20;
   
   /* Background with opacity */
   --color-bg-primary-40: rgba(5, 10, 14, 0.4);
@@ -136,13 +174,13 @@
   --color-bg-overlay: rgba(0, 0, 0, 0.8);
   --color-bg-modal: var(--color-bg-primary);
   
-  /* Text Colors */
-  --color-text-primary: #e4fbf2;
-  --color-text-secondary: #7ddfbd;
-  --color-text-tertiary: #b3f0d7;
-  --color-text-muted: rgba(125, 223, 189, 0.6);
-  --color-text-faded: rgba(125, 223, 189, 0.4);
-  --color-text-secondary-90: rgba(125, 223, 189, 0.9);
+  /* Text Colors - Purple/Blue Theme */
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #c7d2fe;
+  --color-text-tertiary: #ddd6fe;
+  --color-text-muted: rgba(199, 210, 254, 0.6);
+  --color-text-faded: rgba(199, 210, 254, 0.4);
+  --color-text-secondary-90: rgba(199, 210, 254, 0.9);
   
   /* Border Colors */
   --color-border-primary: var(--color-primary-40);
@@ -184,7 +222,7 @@
   --color-ping-poor-05: rgba(220, 38, 38, 0.05);
   
   /* Scrollbar Colors */
-  --color-scrollbar-thumb: rgba(11, 82, 46, 0.5);
+  --color-scrollbar-thumb: rgba(99, 102, 241, 0.5);
   --color-scrollbar-track: transparent;
 }
 
@@ -894,11 +932,117 @@
     background-color: var(--color-scrollbar-thumb);
     border-radius: 8px;
   }
-  
-  *::-ms-scrollbar-thumb:hover {
-    background-color: var(--color-scrollbar-thumb);
-  }
 }
+
+/* New Animation Utility Classes */
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-primary-20) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+.animate-rotate-border {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-rotate-border::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: conic-gradient(
+    from 0deg,
+    var(--color-primary),
+    var(--color-primary-light),
+    var(--color-primary),
+    var(--color-primary-dark),
+    var(--color-primary)
+  );
+  border-radius: inherit;
+  animation: rotate-border 3s linear infinite;
+  z-index: -1;
+}
+
+/* Enhanced hover effects */
+.hover-glow:hover {
+  box-shadow: 0 0 20px var(--color-primary-50), 0 0 40px var(--color-primary-30);
+  transition: all 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-5px);
+  transition: all 0.3s ease;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+  transition: all 0.3s ease;
+}
+
+/* Gradient backgrounds */
+.bg-gradient-purple {
+  background: linear-gradient(135deg, var(--color-primary-dark), var(--color-primary-light));
+}
+
+.bg-gradient-purple-radial {
+  background: radial-gradient(circle, var(--color-primary-40), var(--color-bg-primary));
+}
+
+/* Text effects */
+.text-glow {
+  text-shadow: 0 0 10px var(--color-primary-70), 0 0 20px var(--color-primary-50);
+}
+
+.text-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-text-secondary),
+    var(--color-primary-light),
+    var(--color-text-secondary)
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s infinite;
+}
+
+/* Interactive elements */
+.interactive-card {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.interactive-card:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 10px 30px var(--color-primary-30), 0 0 20px var(--color-primary-20);
+}
+
+/* Pulsing elements */
+.pulse-slow {
+  animation: pulse-glow 4s ease-in-out infinite;
+}
+
+.pulse-fast {
+  animation: pulse-glow 1s ease-in-out infinite;
+}
+
 iframe::-webkit-scrollbar {
   display: none;
 }

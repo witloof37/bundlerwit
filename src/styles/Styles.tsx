@@ -44,16 +44,26 @@ export const initStyles = () => {
   /* Background grid animation */
   @keyframes grid-pulse {
     0% { opacity: 0.1; }
-    50% { opacity: 0.15; }
+    50% { opacity: 0.2; }
     100% { opacity: 0.1; }
+  }
+
+  @keyframes grid-shift {
+    0% { transform: translate(0, 0); }
+    25% { transform: translate(2px, 2px); }
+    50% { transform: translate(0, 4px); }
+    75% { transform: translate(-2px, 2px); }
+    100% { transform: translate(0, 0); }
   }
 
   .cyberpunk-bg {
     background-color: var(--color-bg-primary);
     background-image: 
-      linear-gradient(var(--color-primary-05) 1px, transparent 1px),
-      linear-gradient(90deg, var(--color-primary-05) 1px, transparent 1px);
-    background-size: 20px 20px;
+      linear-gradient(var(--color-primary-10) 1px, transparent 1px),
+      linear-gradient(90deg, var(--color-primary-10) 1px, transparent 1px),
+      radial-gradient(circle at 25% 25%, var(--color-primary-05) 0%, transparent 50%),
+      radial-gradient(circle at 75% 75%, var(--color-primary-05) 0%, transparent 50%);
+    background-size: 20px 20px, 20px 20px, 100px 100px, 150px 150px;
     background-position: center center;
     position: relative;
     overflow: hidden;
@@ -67,42 +77,96 @@ export const initStyles = () => {
     right: 0;
     bottom: 0;
     background-image: 
-      linear-gradient(var(--color-primary-05) 1px, transparent 1px),
-      linear-gradient(90deg, var(--color-primary-05) 1px, transparent 1px);
+      linear-gradient(var(--color-primary-10) 1px, transparent 1px),
+      linear-gradient(90deg, var(--color-primary-10) 1px, transparent 1px);
     background-size: 20px 20px;
     background-position: center center;
-    animation: grid-pulse 4s infinite;
+    animation: grid-pulse 4s infinite, grid-shift 8s infinite;
     z-index: 0;
   }
 
-  /* Glowing border effect */
+  /* Enhanced glowing border effect */
   @keyframes border-glow {
-    0% { box-shadow: 0 0 5px var(--color-primary-50), inset 0 0 5px var(--color-primary-20); }
-    50% { box-shadow: 0 0 10px var(--color-primary-80), inset 0 0 10px var(--color-primary-30); }
-    100% { box-shadow: 0 0 5px var(--color-primary-50), inset 0 0 5px var(--color-primary-20); }
+    0% { 
+      box-shadow: 0 0 5px var(--color-primary-50), inset 0 0 5px var(--color-primary-20);
+      border-color: var(--color-primary-50);
+    }
+    25% {
+      box-shadow: 0 0 15px var(--color-primary-70), inset 0 0 10px var(--color-primary-30);
+      border-color: var(--color-primary-70);
+    }
+    50% { 
+      box-shadow: 0 0 20px var(--color-primary-80), inset 0 0 15px var(--color-primary-40);
+      border-color: var(--color-primary-light);
+    }
+    75% {
+      box-shadow: 0 0 15px var(--color-primary-70), inset 0 0 10px var(--color-primary-30);
+      border-color: var(--color-primary-70);
+    }
+    100% { 
+      box-shadow: 0 0 5px var(--color-primary-50), inset 0 0 5px var(--color-primary-20);
+      border-color: var(--color-primary-50);
+    }
   }
 
   .cyberpunk-border {
     border: 1px solid var(--color-primary-50);
-    border-radius: 4px;
-    animation: border-glow 4s infinite;
+    border-radius: 6px;
+    animation: border-glow 3s infinite;
+    transition: all 0.3s ease;
   }
 
-  /* Button hover animations */
+  /* Enhanced button hover animations */
   @keyframes btn-glow {
-    0% { box-shadow: 0 0 5px var(--color-primary); }
-    50% { box-shadow: 0 0 15px var(--color-primary); }
-    100% { box-shadow: 0 0 5px var(--color-primary); }
+    0% { 
+      box-shadow: 0 0 5px var(--color-primary), 0 0 10px var(--color-primary-40);
+      transform: scale(1);
+    }
+    50% { 
+      box-shadow: 0 0 20px var(--color-primary), 0 0 30px var(--color-primary-60);
+      transform: scale(1.02);
+    }
+    100% { 
+      box-shadow: 0 0 5px var(--color-primary), 0 0 10px var(--color-primary-40);
+      transform: scale(1);
+    }
+  }
+
+  @keyframes btn-shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
   }
 
   .cyberpunk-btn {
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
+    background: linear-gradient(135deg, var(--color-primary-dark), var(--color-primary));
   }
 
   .cyberpunk-btn:hover {
-    animation: btn-glow 2s infinite;
+    animation: btn-glow 1.5s infinite;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+  }
+
+  .cyberpunk-btn::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.2) 50%,
+      transparent 100%
+    );
+    transition: all 0.5s ease;
+  }
+
+  .cyberpunk-btn:hover::before {
+    animation: btn-shimmer 0.8s ease;
   }
 
   .cyberpunk-btn::after {
@@ -112,20 +176,19 @@ export const initStyles = () => {
     left: -50%;
     width: 200%;
     height: 200%;
-    background: linear-gradient(
-      to bottom right,
-      transparent 0%,
-      var(--color-primary-30) 50%,
-      transparent 100%
+    background: radial-gradient(
+      circle,
+      var(--color-primary-30) 0%,
+      transparent 70%
     );
-    transform: rotate(45deg);
-    transition: all 0.5s ease;
+    transform: scale(0);
+    transition: all 0.3s ease;
     opacity: 0;
   }
 
   .cyberpunk-btn:hover::after {
     opacity: 1;
-    transform: rotate(45deg) translate(50%, 50%);
+    transform: scale(1);
   }
 
   /* Glitch effect for text */
@@ -320,6 +383,122 @@ export const initStyles = () => {
   @keyframes fadeIn {
     0% { opacity: 0; }
     100% { opacity: 1; }
+  }
+
+  /* New enhanced animations */
+  @keyframes float-gentle {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    33% { transform: translateY(-8px) rotate(1deg); }
+    66% { transform: translateY(-4px) rotate(-1deg); }
+  }
+
+  @keyframes pulse-border {
+    0% { border-color: var(--color-primary-40); }
+    50% { border-color: var(--color-primary-light); }
+    100% { border-color: var(--color-primary-40); }
+  }
+
+  @keyframes glow-text {
+    0%, 100% { 
+      text-shadow: 0 0 5px var(--color-primary-50);
+      color: var(--color-text-secondary);
+    }
+    50% { 
+      text-shadow: 0 0 15px var(--color-primary-70), 0 0 25px var(--color-primary-50);
+      color: var(--color-primary-light);
+    }
+  }
+
+  @keyframes slide-in-bounce {
+    0% {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+    60% {
+      transform: translateX(10%);
+      opacity: 0.8;
+    }
+    80% {
+      transform: translateX(-5%);
+      opacity: 0.9;
+    }
+    100% {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  /* Enhanced utility classes */
+  .animate-float-gentle {
+    animation: float-gentle 6s ease-in-out infinite;
+  }
+
+  .animate-pulse-border {
+    animation: pulse-border 2s ease-in-out infinite;
+  }
+
+  .animate-glow-text {
+    animation: glow-text 3s ease-in-out infinite;
+  }
+
+  .animate-slide-in-bounce {
+    animation: slide-in-bounce 0.8s ease-out;
+  }
+
+  /* Interactive hover states */
+  .hover-float:hover {
+    animation: float-gentle 2s ease-in-out infinite;
+  }
+
+  .hover-glow-intense:hover {
+    box-shadow: 
+      0 0 20px var(--color-primary-60),
+      0 0 40px var(--color-primary-40),
+      0 0 60px var(--color-primary-20);
+    transform: scale(1.05);
+    transition: all 0.3s ease;
+  }
+
+  /* Card animations */
+  .card-entrance {
+    animation: slide-in-bounce 0.6s ease-out;
+  }
+
+  .card-hover-lift {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .card-hover-lift:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 
+      0 20px 40px var(--color-primary-20),
+      0 0 20px var(--color-primary-30);
+  }
+
+  /* Background particle effect */
+  .particle-bg {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .particle-bg::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+      radial-gradient(2px 2px at 20px 30px, var(--color-primary-20), transparent),
+      radial-gradient(2px 2px at 40px 70px, var(--color-primary-15), transparent),
+      radial-gradient(1px 1px at 90px 40px, var(--color-primary-25), transparent),
+      radial-gradient(1px 1px at 130px 80px, var(--color-primary-20), transparent),
+      radial-gradient(2px 2px at 160px 30px, var(--color-primary-15), transparent);
+    background-repeat: repeat;
+    background-size: 200px 100px;
+    animation: float-gentle 20s linear infinite;
+    opacity: 0.6;
+    z-index: 0;
   }
   `;
 };
